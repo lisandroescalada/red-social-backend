@@ -46,15 +46,15 @@ export class EstadisticasController {
         return this.estadisticasService.comentariosPorPublicacion();
     }
 
-    @Get('me-gustas-por-dia')
-    async meGustasPorDia(
-        @Request() req,
-        @Query('dias') dias?: string,
-    ) {
-        this.verificarAdmin(req);
-        const diasNum = dias ? parseInt(dias, 10) : 30;
-        return this.estadisticasService.meGustasPorDia(diasNum);
-    }
+    // @Get('me-gustas-por-dia')
+    // async meGustasPorDia(
+    //     @Request() req,
+    //     @Query('dias') dias?: string,
+    // ) {
+    //     this.verificarAdmin(req);
+    //     const diasNum = dias ? parseInt(dias, 10) : 30;
+    //     return this.estadisticasService.meGustasPorDia(diasNum);
+    // }
 
     @Get('resumen')
     async resumenGeneral(@Request() req) {

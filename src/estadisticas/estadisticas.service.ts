@@ -131,43 +131,43 @@ export class EstadisticasService {
         return resultado;
     }
 
-    async meGustasPorDia(dias: number = 30) {
-        const fechaInicio = new Date();
-        fechaInicio.setDate(fechaInicio.getDate() - dias);
+    // async meGustasPorDia(dias: number = 30) {
+    //     const fechaInicio = new Date();
+    //     fechaInicio.setDate(fechaInicio.getDate() - dias);
 
-        const resultado = await this.publicacionModel.aggregate([
-        {
-            $match: {
-            activo: true,
-            createdAt: { $gte: fechaInicio },
-            },
-        },
-        {
-            $project: {
-            fecha: {
-                $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
-            },
-            likes: { $size: '$meGusta' },
-            },
-        },
-        {
-            $group: {
-            _id: '$fecha',
-            totalLikes: { $sum: '$likes' },
-            },
-        },
-        {
-            $project: {
-            _id: 0,
-            fecha: '$_id',
-            cantidad: '$totalLikes',
-            },
-        },
-        { $sort: { fecha: 1 } },
-        ]);
+    //     const resultado = await this.publicacionModel.aggregate([
+    //     {
+    //         $match: {
+    //         activo: true,
+    //         createdAt: { $gte: fechaInicio },
+    //         },
+    //     },
+    //     {
+    //         $project: {
+    //         fecha: {
+    //             $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
+    //         },
+    //         likes: { $size: '$meGusta' },
+    //         },
+    //     },
+    //     {
+    //         $group: {
+    //         _id: '$fecha',
+    //         totalLikes: { $sum: '$likes' },
+    //         },
+    //     },
+    //     {
+    //         $project: {
+    //         _id: 0,
+    //         fecha: '$_id',
+    //         cantidad: '$totalLikes',
+    //         },
+    //     },
+    //     { $sort: { fecha: 1 } },
+    //     ]);
 
-        return resultado;
-    }
+    //     return resultado;
+    // }
 
     async resumenGeneral() {
         const totalUsuarios = await this.usuarioModel.countDocuments({ activo: true });
