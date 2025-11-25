@@ -68,12 +68,15 @@ export class AutenticacionService {
 
         // Buscar por usuario o correo
         const usuario = await this.usuarioModel.findOne({
-            $or: [{ usuario: usuarioOCorreo }, { correo: usuarioOCorreo }],
-            activo: true,
+            $or: [{ usuario: usuarioOCorreo }, { correo: usuarioOCorreo }]
         });
 
         if (!usuario) {
             throw new UnauthorizedException('Credenciales inválidas');
+        }
+
+        if (!usuario.activo) {
+            throw new UnauthorizedException('Usuario desactivado');
         }
 
         // Verificar contraseña
