@@ -16,8 +16,8 @@ async function bootstrap() {
   app.enableCors({
     origin: [
       process.env.FRONTEND_URL || 'http://localhost:4200',
-      'http://192.168.0.11:8080',
-      'http://127.0.0.1:8080'
+      'http://192.168.1.39:8080',
+      'http://localhost:8080'
     ],
     credentials: true,
   });
