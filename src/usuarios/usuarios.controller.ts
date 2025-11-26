@@ -12,15 +12,17 @@ import {
     ForbiddenException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
 import { UsuariosService } from './usuarios.service';
 import { JwtAuthGuard } from '../autenticacion/guards/jwt-auth.guard';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 
 @Controller('usuarios')
 @UseGuards(JwtAuthGuard)
 export class UsuariosController {
-    constructor(private usuariosService: UsuariosService) {}
+    constructor(
+        private usuariosService: UsuariosService,
+        private cloudinaryService: CloudinaryService,
+    ) {}
 
     @Get('perfil')
     async obtenerPerfil(@Request() req) {
@@ -30,20 +32,13 @@ export class UsuariosController {
     @Put('perfil')
     @UseInterceptors(
         FileInterceptor('imagen', {
-            storage: diskStorage({
-                destination: './uploads/usuarios',
-                filename: (req, file, cb) => {
-                    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-                    cb(null, `usuario-${uniqueSuffix}${extname(file.originalname)}`);
-                },
-            }),
         fileFilter: (req, file, cb) => {
-            if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
+            if (!file.mimetype.match(/\/(jpg|jpeg|png|gif|webp)$/)) {
                 return cb(new Error('Solo se permiten imágenes'), false);
             }
             cb(null, true);
         },
-        limits: { fileSize: 5 * 1024 * 1024 },
+        limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
         }),
     )
     async actualizarPerfil(
@@ -51,8 +46,13 @@ export class UsuariosController {
         @Body() datos: any,
         @UploadedFile() file?: Express.Multer.File,
     ) {
-        const imagenPath = file ? `/uploads/usuarios/${file.filename}` : null;
-        return this.usuariosService.actualizarPerfil(req.user.id, datos, (imagenPath ?? ''));
+        let imagenUrl: string | null = null;
+        
+        if (file) {
+            imagenUrl = await this.cloudinaryService.subirImagen(file, 'usuarios');
+        }
+        
+        return this.usuariosService.actualizarPerfil(req.user.id, datos, (imagenUrl ?? ''));
     }
 
     // Rutas Admin
@@ -67,15 +67,8 @@ export class UsuariosController {
     @Post()
     @UseInterceptors(
         FileInterceptor('imagen', {
-        storage: diskStorage({
-            destination: './uploads/usuarios',
-            filename: (req, file, cb) => {
-                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-                cb(null, `usuario-${uniqueSuffix}${extname(file.originalname)}`);
-            },
-        }),
         fileFilter: (req, file, cb) => {
-            if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
+            if (!file.mimetype.match(/\/(jpg|jpeg|png|gif|webp)$/)) {
                 return cb(new Error('Solo se permiten imágenes'), false);
             }
             cb(null, true);
@@ -91,8 +84,14 @@ export class UsuariosController {
         if (req.user.rol !== 'admin') {
             throw new ForbiddenException('Acceso solo para administradores');
         }
-        const imagenPath = file ? `/uploads/usuarios/${file.filename}` : null;
-        return this.usuariosService.crear(datos, (imagenPath ?? ''));
+        
+        let imagenUrl: string | null = null;
+        
+        if (file) {
+            imagenUrl = await this.cloudinaryService.subirImagen(file, 'usuarios');
+        }
+        
+        return this.usuariosService.crear(datos, (imagenUrl ?? ''));
     }
 
     @Put(':id/estado')

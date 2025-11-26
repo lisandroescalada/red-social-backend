@@ -8,29 +8,24 @@ import {
     Request,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
 import { AutenticacionService } from './autenticacion.service';
 import { RegistroDto, LoginDto } from './dto/registro.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 
 @Controller('autenticacion')
 export class AutenticacionController {
-    constructor(private autenticacionService: AutenticacionService) {}
+    constructor(
+        private autenticacionService: AutenticacionService,
+        private cloudinaryService: CloudinaryService,
+    ) {}
 
     @Post('registro')
     @UseInterceptors(
         FileInterceptor('imagen', {
-        storage: diskStorage({
-            destination: './uploads/usuarios',
-            filename: (req, file, cb) => {
-                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-                cb(null, `usuario-${uniqueSuffix}${extname(file.originalname)}`);
-            },
-        }),
         fileFilter: (req, file, cb) => {
-            if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
-            return cb(new Error('Solo se permiten imágenes'), false);
+            if (!file.mimetype.match(/\/(jpg|jpeg|png|gif|webp)$/)) {
+                return cb(new Error('Solo se permiten imágenes'), false);
             }
             cb(null, true);
         },
@@ -41,8 +36,13 @@ export class AutenticacionController {
         @Body() registroDto: RegistroDto,
         @UploadedFile() file?: Express.Multer.File,
     ) {
-        const imagenPath = file ? `/uploads/usuarios/${file.filename}` : null;
-        return this.autenticacionService.registrar(registroDto, (imagenPath ?? ''));
+        let imagenUrl: string | null = null;
+        
+        if (file) {
+            imagenUrl = await this.cloudinaryService.subirImagen(file, 'usuarios');
+        }
+        
+        return this.autenticacionService.registrar(registroDto, (imagenUrl ?? ''));
     }
 
     @Post('login')

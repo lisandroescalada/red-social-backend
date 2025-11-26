@@ -17,72 +17,82 @@ export class EstadisticasService {
         const match: any = { activo: true };
         
         if (fechaInicio && fechaFin) {
-        match.createdAt = {
-            $gte: new Date(fechaInicio),
-            $lte: new Date(fechaFin),
+            const inicio = new Date(fechaInicio);
+            const fin = new Date(fechaFin);
+            // Agregar 1 día al final para incluir todo el día
+            fin.setDate(fin.getDate() + 1);
+            
+            match.createdAt = {
+                $gte: inicio,
+                $lt: fin, // Menos que el día siguiente (incluye todo el día actual)
         };
         }
 
         const resultado = await this.publicacionModel.aggregate([
-        { $match: match },
-        {
-            $group: {
-            _id: '$usuario',
-            cantidad: { $sum: 1 },
+            { $match: match },
+            {
+                $group: {
+                _id: '$usuario',
+                cantidad: { $sum: 1 },
+                },
             },
-        },
-        {
-            $lookup: {
-            from: 'usuarios',
-            localField: '_id',
-            foreignField: '_id',
-            as: 'usuario',
+            {
+                $lookup: {
+                from: 'usuarios',
+                localField: '_id',
+                foreignField: '_id',
+                as: 'usuario',
+                },
             },
-        },
-        { $unwind: '$usuario' },
-        {
-            $project: {
-            _id: 0,
-            usuario: '$usuario.usuario',
-            nombre: {
-                $concat: ['$usuario.nombre', ' ', '$usuario.apellido'],
+            { $unwind: '$usuario' },
+            {
+                $project: {
+                _id: 0,
+                usuario: '$usuario.usuario',
+                nombre: {
+                    $concat: ['$usuario.nombre', ' ', '$usuario.apellido'],
+                },
+                cantidad: 1,
+                },
             },
-            cantidad: 1,
-            },
-        },
-        { $sort: { cantidad: -1 } },
+            { $sort: { cantidad: -1 } },
         ]);
 
         return resultado;
     }
 
     async comentariosPorRango(fechaInicio: string, fechaFin: string) {
+        const inicio = new Date(fechaInicio);
+        const fin = new Date(fechaFin);
+        // Agregar 1 día al final para incluir todo el día
+        fin.setDate(fin.getDate() + 1);
+        
         const resultado = await this.comentarioModel.aggregate([
-        {
-            $match: {
-            activo: true,
-            createdAt: {
-                $gte: new Date(fechaInicio),
-                $lte: new Date(fechaFin),
+            {
+                $match: {
+                activo: true,
+                createdAt: {
+                    $gte: inicio,
+                    $lt: fin, // Menos que el día siguiente
+                },
+                },
             },
+            {
+                $group: {
+                _id: {
+                    $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
+                },
+                cantidad: { $sum: 1 },
+                },
             },
-        },
-        {
-            $group: {
-            _id: {
-                $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
+            {
+                $project: {
+                _id: 0,
+                fecha: '$_id',
+                cantidad: 1,
+                },
             },
-            cantidad: { $sum: 1 },
-            },
-        },
-        {
-            $project: {
-            _id: 0,
-            fecha: '$_id',
-            cantidad: 1,
-            },
-        },
-        { $sort: { fecha: 1 } },
+            { $sort: { fecha: 1 } },
         ]);
 
         return resultado;
@@ -90,84 +100,46 @@ export class EstadisticasService {
 
     async comentariosPorPublicacion() {
         const resultado = await this.comentarioModel.aggregate([
-        { $match: { activo: true } },
-        {
-            $group: {
-            _id: '$publicacion',
-            cantidad: { $sum: 1 },
+            { $match: { activo: true } },
+            {
+                $group: {
+                _id: '$publicacion',
+                cantidad: { $sum: 1 },
+                },
             },
-        },
-        {
-            $lookup: {
-            from: 'publicacions',
-            localField: '_id',
-            foreignField: '_id',
-            as: 'publicacion',
+            {
+                $lookup: {
+                from: 'publicacions',
+                localField: '_id',
+                foreignField: '_id',
+                as: 'publicacion',
+                },
             },
-        },
-        { $unwind: '$publicacion' },
-        {
-            $lookup: {
-            from: 'usuarios',
-            localField: 'publicacion.usuario',
-            foreignField: '_id',
-            as: 'usuario',
+            { $unwind: '$publicacion' },
+            {
+                $lookup: {
+                from: 'usuarios',
+                localField: 'publicacion.usuario',
+                foreignField: '_id',
+                as: 'usuario',
+                },
             },
-        },
-        { $unwind: '$usuario' },
-        {
-            $project: {
-            _id: 0,
-            publicacionId: '$_id',
-            contenido: { $substr: ['$publicacion.contenido', 0, 50] },
-            usuario: '$usuario.usuario',
-            cantidad: 1,
+            { $unwind: '$usuario' },
+            {
+                $project: {
+                _id: 0,
+                publicacionId: '$_id',
+                contenido: { $substr: ['$publicacion.contenido', 0, 50] },
+                usuario: '$usuario.usuario',
+                cantidad: 1,
+                },
             },
-        },
-        { $sort: { cantidad: -1 } },
-        { $limit: 10 },
+            { $sort: { cantidad: -1 } },
+            { $limit: 10 },
         ]);
 
         return resultado;
     }
-
-    // async meGustasPorDia(dias: number = 30) {
-    //     const fechaInicio = new Date();
-    //     fechaInicio.setDate(fechaInicio.getDate() - dias);
-
-    //     const resultado = await this.publicacionModel.aggregate([
-    //     {
-    //         $match: {
-    //         activo: true,
-    //         createdAt: { $gte: fechaInicio },
-    //         },
-    //     },
-    //     {
-    //         $project: {
-    //         fecha: {
-    //             $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
-    //         },
-    //         likes: { $size: '$meGusta' },
-    //         },
-    //     },
-    //     {
-    //         $group: {
-    //         _id: '$fecha',
-    //         totalLikes: { $sum: '$likes' },
-    //         },
-    //     },
-    //     {
-    //         $project: {
-    //         _id: 0,
-    //         fecha: '$_id',
-    //         cantidad: '$totalLikes',
-    //         },
-    //     },
-    //     { $sort: { fecha: 1 } },
-    //     ]);
-
-    //     return resultado;
-    // }
 
     async resumenGeneral() {
         const totalUsuarios = await this.usuarioModel.countDocuments({ activo: true });
@@ -175,18 +147,18 @@ export class EstadisticasService {
         const totalComentarios = await this.comentarioModel.countDocuments({ activo: true });
         
         const likesResult = await this.publicacionModel.aggregate([
-        { $match: { activo: true } },
-        { $project: { likes: { $size: '$meGusta' } } },
-        { $group: { _id: null, total: { $sum: '$likes' } } },
+            { $match: { activo: true } },
+            { $project: { likes: { $size: '$meGusta' } } },
+            { $group: { _id: null, total: { $sum: '$likes' } } },
         ]);
         
         const totalLikes = likesResult.length > 0 ? likesResult[0].total : 0;
 
         return {
-        totalUsuarios,
-        totalPublicaciones,
-        totalComentarios,
-        totalLikes,
+            totalUsuarios,
+            totalPublicaciones,
+            totalComentarios,
+            totalLikes,
         };
     }
 }

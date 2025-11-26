@@ -16,7 +16,7 @@ export class EstadisticasController {
 
     private verificarAdmin(req: any) {
         if (req.user.rol !== 'admin') {
-        throw new ForbiddenException('Acceso solo para administradores');
+            throw new ForbiddenException('Acceso solo para administradores');
         }
     }
 
@@ -45,16 +45,6 @@ export class EstadisticasController {
         this.verificarAdmin(req);
         return this.estadisticasService.comentariosPorPublicacion();
     }
-
-    // @Get('me-gustas-por-dia')
-    // async meGustasPorDia(
-    //     @Request() req,
-    //     @Query('dias') dias?: string,
-    // ) {
-    //     this.verificarAdmin(req);
-    //     const diasNum = dias ? parseInt(dias, 10) : 30;
-    //     return this.estadisticasService.meGustasPorDia(diasNum);
-    // }
 
     @Get('resumen')
     async resumenGeneral(@Request() req) {

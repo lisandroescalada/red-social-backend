@@ -12,28 +12,23 @@ import {
     UploadedFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
 import { PublicacionesService } from './publicaciones.service';
 import { JwtAuthGuard } from '../autenticacion/guards/jwt-auth.guard';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 
 @Controller('publicaciones')
 @UseGuards(JwtAuthGuard)
 export class PublicacionesController {
-    constructor(private publicacionesService: PublicacionesService) {}
+    constructor(
+        private publicacionesService: PublicacionesService,
+        private cloudinaryService: CloudinaryService,
+    ) {}
 
     @Post()
     @UseInterceptors(
         FileInterceptor('imagen', {
-        storage: diskStorage({
-            destination: './uploads/publicaciones',
-            filename: (req, file, cb) => {
-                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-                cb(null, `publicacion-${uniqueSuffix}${extname(file.originalname)}`);
-            },
-        }),
         fileFilter: (req, file, cb) => {
-            if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
+            if (!file.mimetype.match(/\/(jpg|jpeg|png|gif|webp)$/)) {
                 return cb(new Error('Solo se permiten imágenes'), false);
             }
             cb(null, true);
@@ -46,8 +41,13 @@ export class PublicacionesController {
         @Body('contenido') contenido: string,
         @UploadedFile() file?: Express.Multer.File,
     ) {
-        const imagenPath = file ? `/uploads/publicaciones/${file.filename}` : null;
-        return this.publicacionesService.crear(req.user.id, contenido, (imagenPath ?? ''));
+        let imagenUrl: string | null = null;
+        
+        if (file) {
+            imagenUrl = await this.cloudinaryService.subirImagen(file, 'publicaciones');
+        }
+        
+        return this.publicacionesService.crear(req.user.id, contenido, (imagenUrl ?? ''));
     }
 
     @Get()
